@@ -1,10 +1,8 @@
 import subprocess
 import json
 import requests
-import time
-import logging
-import signal
 import sys
+import logging
 from datetime import datetime
 
 # ==============================================================================
@@ -34,16 +32,6 @@ def safe_int(val):
         return int(val)
     except Exception:
         return 0
-
-
-def get_interval():
-    h = datetime.now().hour
-    if 17 <= h < 20:
-        return 60
-    elif 6 <= h < 17:
-        return 90
-    else:
-        return 120
 
 
 def fetch_curl(url):
@@ -152,27 +140,13 @@ def collect_all_data():
     }
 
 
-signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
-
-
+# ===== [깃허브 액션 전용] 1회 실행 후 깔끔 종료 =====
 if __name__ == "__main__":
-    log.info("🚀 [배민 데이터 수집 스크립트] 가동 시작")
-    fails = 0
-
-    while True:
-        try:
-            payload = collect_all_data()
-            resp = push_to_gas(payload)
-            log.info(f"✔️ 전송 완료 ({resp}) | 총 기사 수: {len(payload['riderList'])}명 | 운행중: {payload['ridingCount']}명")
-            fails = 0
-
-        except PermissionError as e:
-            log.error(f"❌ {e}")
-            time.sleep(120)
-
-        except Exception as exc:
-            log.error(f"⚠️ 시스템 오류: {exc}")
-            fails += 1
-
-        sleep_time = min(60 * fails, 600) if fails else get_interval()
-        time.sleep(sleep_time)
+    log.info("🚀 [깃허브 액션 수집기] 데이터 수집 및 전송 시작")
+    try:
+        payload = collect_all_data()
+        resp = push_to_gas(payload)
+        log.info(f"✔️ 전송 완료 ({resp}) | 총 기사 수: {len(payload['riderList'])}명 | 운행중: {payload['ridingCount']}명")
+    except Exception as exc:
+        log.error(f"❌ 수집 예외 발생: {exc}")
+        sys.exit(1)
