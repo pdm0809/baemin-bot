@@ -6,10 +6,12 @@ from urllib.parse import urlparse
 PORT = 80
 CENTER_ID = "DP2511060448"
 
-# 배민 세션 쿠키
-COOKIE = "dsid=8dff4928-c182-47d4-8772-e2a5a402a157; _wp_uid=1-b64e91cb5ed11a28894cc86e59e4b722-s1776862146.426964|windows_10|chrome-dy1hgz; tbid=6c55babc-a664-4fba-bace-5efe4648c258; _hjSessionUser_5123796=eyJpZCI6IjU3NGNiYzc4LWM4YjctNWI2Yy04MDg4LTcxZDFmYTc5ODVlZCIsImNyZWF0ZWQiOjE3NzY5NDk4MTgzNDEsImV4aXN0aW5nIjp0cnVlfQ==; _ga_QZ54WQ25KW=GS2.1.s1777119700$o2$g1$t1777119717$j43$l0$h0; _ga=GA1.1.1294575212.1776949812; _ga_DD6D4M7LEB=GS2.1.s1777119699$o2$g1$t1777119718$j41$l0$h0; _ga_BVQGVEDG55=GS2.1.s1777119687$o2$g1$t1777119728$j19$l0$h0; _ceo_v2_gk_sid=a0634d36-0886-4231-8074-8acd2a12657b; CENTER_SESSION=NDg0MjFlYjMtNjQ4Ny00OTUxLWJhNjMtM2Q4MWM0NmQwYTg2; __cf_bm=DT4FWbsqEWJFaixDax2ul7wZJotzE9e5LpMzdY3Zc3A-1786511676.58738-1.0.1.1-jcAKtGddzMLLsIzWE6msKMB5LoBidIv1nR0nAwp_h.ImiJ9zrViI0cgy1MpnzZkT7oZ1ckAR1o_Dx8MTOEs1w8FQhu7ZGQDVIIVv_i3fs98b_DcHjZmCSlKM30DB2eoOt1GUI5vDTTQnOMVac4Pf.Q; _ga_ZGDXE0V87X=GS2.1.s1786506922$o25$g1$t1786512423$j54$l0$h0"
-BASE_API_URL = "https://api-deliverycenter.baemin.com/v4/management/delivery-status?size=100&orderName=name&orderBy=asc&name=&userId=&phoneNumber="
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
+# 크롬 cURL에서 추출한 100% 원본 쿠키 적용
+COOKIE = "dsid=8dff4928-c182-47d4-8772-e2a5a402a157; _wp_uid=1-b64e91cb5ed11a28894cc86e59e4b722-s1776862146.426964|windows_10|chrome-dy1hgz; tbid=6c55babc-a664-4fba-bace-5efe4648c258; _hjSessionUser_5123796=eyJpZCI6IjU3NGNiYzc4LWM4YjctNWI2Yy04MDg4LTcxZDFmYTc5ODVlZCIsImNyZWF0ZWQiOjE3NzY5NDk4MTgzNDEsImV4aXN0aW5nIjp0cnVlfQ==; _ga_QZ54WQ25KW=GS2.1.s1777119700$o2$g1$t1777119717$j43$l0$h0; _ga=GA1.1.1294575212.1776949812; _ga_DD6D4M7LEB=GS2.1.s1777119699$o2$g1$t1777119718$j41$l0$h0; _ga_BVQGVEDG55=GS2.1.s1777119687$o2$g1$t1777119728$j19$l0$h0; _ceo_v2_gk_sid=a0634d36-0886-4231-8074-8acd2a12657b; CENTER_SESSION=NDg0MjFlYjMtNjQ4Ny00OTUxLWJhNjMtM2Q4MWM0NmQwYTg2; _ga_ZGDXE0V87X=GS2.1.s1786519969$o27$g1$t1786523601$j60$l0$h0; __cf_bm=_UQcXaDVcvOlgvve6bHauelqmZU2f_0GPRSqcoqXRjE-1786523601.9274848-1.0.1.1-zh4KlC2FzUlrlqzBNMb2ievoKZ2VktwbiMVGFqI_B0jk8Toc3EtLRnCmo3ygYT2HYbUg83yyNAFpELqhgWrGITVvTNG5YHwl1CKCFr150Q03i79i2ETxqjdVU.tNGc1X1AqQR8ITMF5YmzvMf5SPYA"
+
+# 크롬 원본 cURL의 &riderStatus= 포함 URL
+BASE_API_URL = "https://api-deliverycenter.baemin.com/v4/management/delivery-status?size=100&orderName=name&orderBy=asc&name=&userId=&phoneNumber=&riderStatus="
+UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
 
 LATEST_DATA = {}
 CUSTOM_SETTINGS = {}
@@ -32,8 +34,27 @@ def safe_int(v):
     except: return 0
 
 def fetch_curl(url):
-    cmd = ["curl", "-s", url, "-H", f"authority: api-deliverycenter.baemin.com", "-H", "accept: application/json", "-H", f"center-id: {CENTER_ID}", "-H", f"cookie: {COOKIE}", "-H", f"user-agent: {UA}", "--compressed"]
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=20).stdout
+    """크롬 F12 Copy as cURL와 1:1 완벽 동일한 -b 쿠키 플래그 및 헤더 적용"""
+    cmd = [
+        "curl", "-s", url,
+        "-H", "accept: application/json, text/plain, */*",
+        "-H", "accept-language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "-H", f"center-id: {CENTER_ID}",
+        "-b", COOKIE,
+        "-H", "origin: https://deliverycenter.baemin.com",
+        "-H", "priority: u=1, i",
+        "-H", "referer: https://deliverycenter.baemin.com/",
+        "-H", 'sec-ch-ua: "Not=A?Brand";v="99", "Google Chrome";v="151", "Chromium";v="151"',
+        "-H", "sec-ch-ua-mobile: ?0",
+        "-H", 'sec-ch-ua-platform: "Windows"',
+        "-H", "sec-fetch-dest: empty",
+        "-H", "sec-fetch-mode: cors",
+        "-H", "sec-fetch-site: same-site",
+        "-H", f"user-agent: {UA}",
+        "--compressed"
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+    return res.stdout
 
 def collect_loop():
     global LATEST_DATA
@@ -42,10 +63,15 @@ def collect_loop():
         try:
             page, all_riders, total_summary, riding_count = 0, [], {}, 0
             while True:
-                raw = fetch_curl(f"{BASE_API_URL}&page={page}")
-                if not raw or not raw.strip().startswith("{"): break
+                url = f"{BASE_API_URL}&page={page}"
+                raw = fetch_curl(url)
+                if not raw or not raw.strip().startswith("{"):
+                    log.error(f"❌ API 응답 오류: {raw[:150] if raw else '빈 응답'}")
+                    break
+
                 data = json.loads(raw)
                 if page == 0: total_summary = data.get("deliveryStatusTotalResponse", {})
+
                 for r in data.get("data", []):
                     ac, pt, st = r.get("deliveryAcceptanceCount", {}) or {}, r.get("deliveryPeakTimeCount", {}) or {}, r.get("status", {})
                     st_code = st.get("code", "READY") if isinstance(st, dict) else str(st)
@@ -72,6 +98,7 @@ def collect_loop():
             log.info(f"✔️ 데이터 수집 완료 | 총 기사 수: {len(all_riders)}명 | 운행중: {riding_count}명")
         except Exception as e:
             log.error(f"⚠️ 수집 예외: {e}")
+
         h = datetime.now().hour
         time.sleep(60 if 17 <= h < 20 else 90)
 
@@ -80,8 +107,7 @@ def get_processed_data():
     now = datetime.now()
     hour, day_idx = now.hour, 6 if now.weekday() == 6 else now.weekday()
     is_weekend = (day_idx in (5, 6))
-    
-    # 시간대 기준 정밀 세팅 (저녁피크: 17~20시)
+
     times = CUSTOM_SETTINGS.get("times", {
         "morning_end": 14 if is_weekend else 13,
         "afternoon_end": 17,
