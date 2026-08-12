@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <title>초곡 기지국 - 배민커넥트비즈</title>
 
-  <!-- PWA 및 모바일 전체 화면 설정 (브라우저 주소창 제거) -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -31,7 +30,6 @@
     .ilabel{font-size:4vw;color:#ccc;}
     .ifield{background:#2c2c2e;color:#fff;border:1px solid #444;border-radius:8px;padding:2vw 3vw;font-size:4.5vw;font-weight:700;width:28vw;text-align:center;}
 
-    /* 다크모드 전용 기사 상세 현황 표 */
     .rider-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000;color:#fff;z-index:1000;flex-direction:column;}
     .rider-header{background:#1c1c1e;color:#fff;padding:3vw 4vw;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333;flex-shrink:0;}
     .table-wrapper{flex:1; overflow:auto; -webkit-overflow-scrolling:touch; background:#000;}
@@ -108,7 +106,6 @@
     </div>
   </div>
 
-  <!-- 기사 상세 현황 모달 (제목 및 다크모드 적용) -->
   <div id='riderModal' class='rider-modal'>
     <div style='height:100vh; display:flex; flex-direction:column;'>
       <div class='rider-header'>
@@ -143,10 +140,9 @@
     var currentData=null;
     var isRefreshing = false;
 
-    // 운행상태 필터 (DELIVERING: 운행중, READY: 운행종료)
-    var statusFilter = 'DELIVERING'; // 기본값: 운행중
-    var sortCol = 'allDay';          // 기본 정렬: 총 배달완료
-    var sortAsc = false;             // 내림차순(큰수 먼저)
+    var statusFilter = 'DELIVERING'; // 기본값: 운행중 (클릭 시 운행종료 전환)
+    var sortCol = 'allDay';          
+    var sortAsc = false;             
 
     function unlockDashboard() {
       var pwd = document.getElementById("chogok-pwd").value;
@@ -211,7 +207,6 @@
       updateRiderTableHTML();
     }
 
-    // 운행상태 클릭 시 운행중 ↔ 운행종료만 전환
     function toggleStatusFilter() {
       statusFilter = (statusFilter === 'DELIVERING') ? 'READY' : 'DELIVERING';
       updateRiderTableHTML();
@@ -253,7 +248,6 @@
         '<th>0시</th><th>1시</th><th>2시</th><th>3시</th><th>4시</th><th>5시</th>' +
       '</tr>';
 
-      // 1. 운행중/운행종료 필터링
       var list = currentData.riderList.filter(function(r){
         var st = r.status ? (r.status.code || r.status) : 'READY';
         if (statusFilter === 'DELIVERING' && st !== 'DELIVERING') return false;
@@ -262,7 +256,6 @@
         return (r.name || '').toLowerCase().indexOf(filterKeyword) !== -1;
       });
 
-      // 2. 오름차순/내림차순 정렬
       list.sort(function(a, b) {
         var accA = a.acceptance || a.deliveryAcceptanceCount || {}, ptA = a.peakTime || a.deliveryPeakTimeCount || {};
         var accB = b.acceptance || b.deliveryAcceptanceCount || {}, ptB = b.peakTime || b.deliveryPeakTimeCount || {};
@@ -400,7 +393,6 @@
         });
     }
 
-    // 상세 모달 내 당겨서 새로고침 (페이지 리로드 차단)
     var scrollArea = document.getElementById('riderScrollArea');
     var startY = 0;
     scrollArea.addEventListener('touchstart', function(e){
