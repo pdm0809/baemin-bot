@@ -93,7 +93,7 @@
         <span style='font-size:4.5vw;font-weight:700;color:#FF9500;'>📦 목표물량</span>
         <div style='display:flex;align-items:center;background:#2c2c2e;border-radius:8px;padding:1vw;'>
           <div onclick='changeSetCount(-1)' style='color:#FF9500;font-size:4.5vw;font-weight:900;padding:1vw 3vw;cursor:pointer;'>➖</div>
-          <div id='setNumberDisplay' style='color:#fff;font-size:4.5vw;font-weight:900;width:5vw;text-align:center;'>1</div>
+          <div id='setNumberDisplay' style='color:#fff;font-size:4.5vw;font-weight:900;width:5vw;text-align:center;'>8</div>
           <div onclick='changeSetCount(1)' style='color:#FF9500;font-size:4.5vw;font-weight:900;padding:1vw 3vw;cursor:pointer;'>➕</div>
         </div>
         <div style='display:flex;gap:1.5vw;'>
@@ -113,7 +113,7 @@
       <div class='irow'><span class='ilabel'>저녁피크 종료</span><input class='ifield' id='te_evening' type='number' min='6' max='23'></div>
       
       <div style='display:flex;gap:3vw;margin-top:5vw;'>
-        <button class='btn' style='flex:1;background:#3a3a3c;color:#fff;padding:4vw;font-size:4.5vw;' onclick='executeReset()'>기본값 복원</button>
+        <button class='btn' style='flex:1;background:#3a3a3c;color:#fff;padding:4vw;font-size:4.5vw;' onclick='executeReset()'>기본값(8세트) 복원</button>
         <button class='btn' style='flex:1;background:#FF9500;color:#fff;padding:4vw;font-size:4.5vw;' onclick='saveSettings()'>저장</button>
       </div>
       <button class='btn' style='width:100%;background:#2c2c2e;color:#aaa;padding:4vw;font-size:4.5vw;margin-top:3vw;' onclick='closeSettings()'>닫기</button>
@@ -369,7 +369,7 @@
       document.getElementById('te_morning').value=ti.morning_end||13;
       document.getElementById('te_afternoon').value=ti.afternoon_end||17;
       document.getElementById('te_evening').value=ti.evening_end||20;
-      document.getElementById('setNumberDisplay').textContent=currentData.setCount||1; 
+      document.getElementById('setNumberDisplay').textContent=currentData.setCount||8; 
       history.pushState({modal:true},'',location.href); document.getElementById('modal').style.display='block';
     }
     function closeSettings(){document.getElementById('modal').style.display='none';}
@@ -377,7 +377,7 @@
     function changeSetCount(delta) {
       if(!currentData || !currentData.baseTargets) return;
       var el = document.getElementById('setNumberDisplay');
-      var c = parseInt(el.textContent) || 1;
+      var c = parseInt(el.textContent) || 8;
       var n = c + delta;
       if(n < 1) n = 1; if(n > 99) n = 99;
       el.textContent = n;
@@ -390,7 +390,7 @@
     }
 
     function fillSaturdayTargets(){
-      var n = parseInt(document.getElementById('setNumberDisplay').textContent) || 1;
+      var n = parseInt(document.getElementById('setNumberDisplay').textContent) || 8;
       var base = (currentData && currentData.baseTargets) || {morning:[19,19,19,19,21,27,29],afternoon:[18,18,18,18,21,22,22],evening:[30,30,30,30,32,36,35],night:[23,23,23,23,26,25,24]};
       document.getElementById('t_morning').value = Math.round(base.morning[5] * n);
       document.getElementById('t_afternoon').value = Math.round(base.afternoon[5] * n);
@@ -403,7 +403,7 @@
     }
 
     function fillSundayTargets(){
-      var n = parseInt(document.getElementById('setNumberDisplay').textContent) || 1;
+      var n = parseInt(document.getElementById('setNumberDisplay').textContent) || 8;
       var base = (currentData && currentData.baseTargets) || {morning:[19,19,19,19,21,27,29],afternoon:[18,18,18,18,21,22,22],evening:[30,30,30,30,32,36,35],night:[23,23,23,23,26,25,24]};
       document.getElementById('t_morning').value = Math.round(base.morning[6] * n);
       document.getElementById('t_afternoon').value = Math.round(base.afternoon[6] * n);
@@ -416,15 +416,16 @@
     }
 
     function saveSettings(){
-      var s={setCount:parseInt(document.getElementById('setNumberDisplay').textContent)||1,targets:{morning:parseInt(document.getElementById('t_morning').value)||0,afternoon:parseInt(document.getElementById('t_afternoon').value)||0,evening:parseInt(document.getElementById('t_evening').value)||0,night:parseInt(document.getElementById('t_night').value)||0},times:{morning_end:parseInt(document.getElementById('te_morning').value)||0,afternoon_end:parseInt(document.getElementById('te_afternoon').value)||0,evening_end:parseInt(document.getElementById('te_evening').value)||0}};
+      var s={setCount:parseInt(document.getElementById('setNumberDisplay').textContent)||8,targets:{morning:parseInt(document.getElementById('t_morning').value)||0,afternoon:parseInt(document.getElementById('t_afternoon').value)||0,evening:parseInt(document.getElementById('t_evening').value)||0,night:parseInt(document.getElementById('t_night').value)||0},times:{morning_end:parseInt(document.getElementById('te_morning').value)||0,afternoon_end:parseInt(document.getElementById('te_afternoon').value)||0,evening_end:parseInt(document.getElementById('te_evening').value)||0}};
       fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(s)})
         .then(function(){ closeSettings(); loadData(); showToast('✔️ 설정이 저장됐어요!'); })
         .catch(function(){ showToast('저장 실패!'); });
     }
 
     function executeReset(){
+      document.getElementById('setNumberDisplay').textContent = 8;
       fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({})})
-        .then(function(){ closeSettings(); loadData(); showToast('🔄 기본값으로 복원!'); });
+        .then(function(){ closeSettings(); loadData(); showToast('🔄 기본값(8세트)으로 복원!'); });
     }
 
     function loadData(){
