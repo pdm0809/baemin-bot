@@ -11,7 +11,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#000000">
 
-  <!-- PWA 앱 매니페스트 (바탕화면 설치 시 주소창 없는 전용 앱으로 구동) -->
   <link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22%EC%B0%88%EA%B3%A1%20%EA%B8%B0%EC%A7%80%EA%B5%AD%22%2C%22short_name%22%3A%22%EC%B0%88%EA%B3%A1%EA%B8%B0%EC%A7%80%EA%B5%AD%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23000000%22%2C%22theme_color%22%3A%22%23000000%22%7D">
 
   <style>
@@ -32,7 +31,7 @@
     .ilabel{font-size:4vw;color:#ccc;}
     .ifield{background:#2c2c2e;color:#fff;border:1px solid #444;border-radius:8px;padding:2vw 3vw;font-size:4.5vw;font-weight:700;width:28vw;text-align:center;}
 
-    /* 다크모드 기사 상세 현황 모달 및 1:1 배민 서식 */
+    /* 다크모드 전용 기사 상세 현황 표 */
     .rider-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000;color:#fff;z-index:1000;flex-direction:column;}
     .rider-header{background:#1c1c1e;color:#fff;padding:3vw 4vw;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333;flex-shrink:0;}
     .table-wrapper{flex:1; overflow:auto; -webkit-overflow-scrolling:touch; background:#000;}
@@ -41,11 +40,9 @@
     .rider-table th:active{background:#333;}
     .rider-table td{padding:2vw 2.5vw; text-align:center; border:1px solid #222; white-space:nowrap; background:#111; color:#eee;}
     
-    /* 좌측 고정 열 (이름) */
     .sticky-name{position:sticky; left:0; z-index:5; background:#1c1c1e !important; border-right:2px solid #444 !important; font-weight:bold; color:#fff !important;}
     td.sticky-name{background:#161616 !important; color:#fff !important;}
     
-    /* 상단 고정 합계 행 */
     .sum-row td{background:#222 !important; font-weight:900; color:#34C759; position:sticky; top:0; z-index:4;}
     .sum-row td.sticky-name{z-index:6; background:#222 !important; color:#34C759 !important;}
     
@@ -59,7 +56,6 @@
 </head>
 <body oncontextmenu='return false;'>
 
-  <!-- 🔒 보안 비밀번호 로그인 화면 -->
   <div id='security-login-screen' style='position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #000; z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center;'>
     <div style='background: #1c1c1e; padding: 8vw 6vw; border-radius: 16px; border: 1px solid #333; text-align: center; width: 80%; max-width: 350px;'>
       <div style='font-size: 6vw; font-weight: 900; color: #34C759; margin-bottom: 2vw;'>🛡️ 기지국 접속</div>
@@ -71,7 +67,6 @@
 
   <div id='toast'></div>
 
-  <!-- 대시보드 헤더 -->
   <div class='header'>
     <div style='display:flex;align-items:center;gap:1.5vw;'>
       <div id='dayName' style='font-size:7.5vw;font-weight:900;color:#fff;white-space:nowrap;'></div>
@@ -83,10 +78,8 @@
     </div>
   </div>
 
-  <!-- 카드 영역 -->
   <div id='cards' class='card-container'></div>
 
-  <!-- 하단 수치 영역 -->
   <div class='total-section' style='display:flex;justify-content:space-between;align-items:flex-end;'>
     <div></div>
     <div style='text-align:right;'>
@@ -96,7 +89,6 @@
     </div>
   </div>
 
-  <!-- 목표 수동 설정 모달 -->
   <div id='modal' class='modal'>
     <div class='modal-box'>
       <div style='font-size:6vw;font-weight:900;margin-bottom:4vw;'>⚙️ 수동 설정</div>
@@ -116,11 +108,11 @@
     </div>
   </div>
 
-  <!-- 기사 상세 현황 모달 -->
+  <!-- 기사 상세 현황 모달 (제목 및 다크모드 적용) -->
   <div id='riderModal' class='rider-modal'>
     <div style='height:100vh; display:flex; flex-direction:column;'>
       <div class='rider-header'>
-        <div style='font-size:4.2vw;font-weight:900;color:#34C759;'>🛵 배민커넥트비즈 기사 현황</div>
+        <div style='font-size:4.2vw;font-weight:900;color:#34C759;'>🛵 기사 상세 현황</div>
         <div style='display:flex;'>
           <button id='riderRefreshBtn' class='btn' style='background:#3a3a3c;color:#fff;margin-right:2vw;padding:1.5vw 2.5vw;font-size:3.5vw;' onclick='refreshRiderData()'>🔄 갱신</button>
           <button class='btn' style='background:#3a3a3c;color:#fff;padding:1.5vw 2.5vw;font-size:3.5vw;' onclick='closeRiders()'>✕ 닫기</button>
@@ -142,7 +134,6 @@
   </div>
 
   <script>
-    // 앱스크립트 백엔드 API 주소
     var GAS_URL = "https://script.google.com/macros/s/AKfycbybEopFhrpBc1IfVtgoWatjNcjq-ucF_i3jnCRpNiUVQ-GNhVkEbt6SjAq9Bv0ipM5h/exec";
 
     var COLORS={morning:'#FF9500',afternoon:'#34C759',evening:'#FF3B30',night:'#AF52DE'};
@@ -152,10 +143,10 @@
     var currentData=null;
     var isRefreshing = false;
 
-    // 정렬 및 필터 변수
-    var statusFilter = 'ALL'; // 'ALL', 'DELIVERING', 'READY'
-    var sortCol = 'allDay';   // 정렬할 기준 컬럼
-    var sortAsc = false;      // false: 내림차순(큰수 먼저), true: 오름차순(작은수 먼저)
+    // 운행상태 필터 (DELIVERING: 운행중, READY: 운행종료)
+    var statusFilter = 'DELIVERING'; // 기본값: 운행중
+    var sortCol = 'allDay';          // 기본 정렬: 총 배달완료
+    var sortAsc = false;             // 내림차순(큰수 먼저)
 
     function unlockDashboard() {
       var pwd = document.getElementById("chogok-pwd").value;
@@ -210,22 +201,19 @@
       document.getElementById('totalDone').textContent=totalDone;
     }
 
-    // 정렬 클릭 처리
     function toggleSort(col) {
       if (sortCol === col) {
         sortAsc = !sortAsc;
       } else {
         sortCol = col;
-        sortAsc = false; // 기본 내림차순(큰 수 먼저)
+        sortAsc = false;
       }
       updateRiderTableHTML();
     }
 
-    // 운행상태 필터링 처리
+    // 운행상태 클릭 시 운행중 ↔ 운행종료만 전환
     function toggleStatusFilter() {
-      if (statusFilter === 'ALL') statusFilter = 'DELIVERING';
-      else if (statusFilter === 'DELIVERING') statusFilter = 'READY';
-      else statusFilter = 'ALL';
+      statusFilter = (statusFilter === 'DELIVERING') ? 'READY' : 'DELIVERING';
       updateRiderTableHTML();
     }
 
@@ -234,12 +222,11 @@
       return sortAsc ? ' ▲' : ' ▼';
     }
 
-    // ===== 배민커넥트비즈 1:1 다크모드 서식 및 정렬/필터링 구현 =====
     function updateRiderTableHTML(){
       if(!currentData||!currentData.riderList){return;}
       var filterKeyword = (document.getElementById('searchInput').value || '').trim().toLowerCase();
       
-      var stLabel = statusFilter === 'DELIVERING' ? ' (운행중만)' : (statusFilter === 'READY' ? ' (운행종료만)' : ' (전체)');
+      var stLabel = statusFilter === 'DELIVERING' ? ' (운행중만)' : ' (운행종료만)';
 
       var theadHtml = '<tr>' +
         '<th rowspan="2" class="sticky-name" onclick="toggleSort(\'name\')">이름' + getSortIcon('name') + '</th>' +
@@ -266,7 +253,7 @@
         '<th>0시</th><th>1시</th><th>2시</th><th>3시</th><th>4시</th><th>5시</th>' +
       '</tr>';
 
-      // 1. 키워드 및 운행상태 필터링
+      // 1. 운행중/운행종료 필터링
       var list = currentData.riderList.filter(function(r){
         var st = r.status ? (r.status.code || r.status) : 'READY';
         if (statusFilter === 'DELIVERING' && st !== 'DELIVERING') return false;
@@ -277,13 +264,13 @@
 
       // 2. 오름차순/내림차순 정렬
       list.sort(function(a, b) {
-        var accA = a.acceptance || {}, ptA = a.peakTime || {};
-        var accB = b.acceptance || {}, ptB = b.peakTime || {};
+        var accA = a.acceptance || a.deliveryAcceptanceCount || {}, ptA = a.peakTime || a.deliveryPeakTimeCount || {};
+        var accB = b.acceptance || b.deliveryAcceptanceCount || {}, ptB = b.peakTime || b.deliveryPeakTimeCount || {};
         
         var valA = 0, valB = 0;
         if (sortCol === 'name') { valA = a.name || ''; valB = b.name || ''; }
         else if (sortCol === 'userId') { valA = a.userId || ''; valB = b.userId || ''; }
-        else if (sortCol === 'allDay') { valA = accA.allDayComplete || 0; valB = accB.allDayComplete || 0; }
+        else if (sortCol === 'allDay') { valA = accA.allDayComplete !== undefined ? accA.allDayComplete : (accA.totalComplete || 0); valB = accB.allDayComplete !== undefined ? accB.allDayComplete : (accB.totalComplete || 0); }
         else if (sortCol === 'cTot') { valA = accA.totalComplete || 0; valB = accB.totalComplete || 0; }
         else if (sortCol === 'rTot') { valA = accA.totalReject || 0; valB = accB.totalReject || 0; }
         else if (sortCol === 'cFood') { valA = accA.foodComplete || 0; valB = accB.foodComplete || 0; }
@@ -309,8 +296,8 @@
 
       var rowsHtml = '';
       list.forEach(function(r){
-        var acc = r.acceptance || {};
-        var pt = r.peakTime || {};
+        var acc = r.acceptance || r.deliveryAcceptanceCount || {};
+        var pt = r.peakTime || r.deliveryPeakTimeCount || {};
         var st = r.status ? (r.status.code || r.status) : 'READY';
         var stDesc = (r.status && r.status.desc) ? r.status.desc : (st === 'DELIVERING' ? '운행중' : '운행 종료');
         var badgeClass = st === 'DELIVERING' ? 'status-delivering' : 'status-ready';
@@ -413,7 +400,7 @@
         });
     }
 
-    // 모달 내 당겨서 새로고침 (페이지 리로드 및 로그인 화면 튕김 방지)
+    // 상세 모달 내 당겨서 새로고침 (페이지 리로드 차단)
     var scrollArea = document.getElementById('riderScrollArea');
     var startY = 0;
     scrollArea.addEventListener('touchstart', function(e){
