@@ -1,4 +1,11 @@
-import subprocess, json, requests, time, logging, threading, sys, os
+import subprocess
+import json
+import requests
+import time
+import logging
+import threading
+import sys
+import os
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
@@ -6,7 +13,9 @@ from urllib.parse import urlparse
 PORT = 80
 CENTER_ID = "DP2511060448"
 
+# 배민 세션 쿠키
 COOKIE = "dsid=8dff4928-c182-47d4-8772-e2a5a402a157; _wp_uid=1-b64e91cb5ed11a28894cc86e59e4b722-s1776862146.426964|windows_10|chrome-dy1hgz; tbid=6c55babc-a664-4fba-bace-5efe4648c258; _hjSessionUser_5123796=eyJpZCI6IjU3NGNiYzc4LWM4YjctNWI2Yy04MDg4LTcxZDFmYTc5ODVlZCIsImNyZWF0ZWQiOjE3NzY5NDk4MTgzNDEsImV4aXN0aW5nIjp0cnVlfQ==; _ga_QZ54WQ25KW=GS2.1.s1777119700$o2$g1$t1777119717$j43$l0$h0; _ga=GA1.1.1294575212.1776949812; _ga_DD6D4M7LEB=GS2.1.s1777119699$o2$g1$t1777119718$j41$l0$h0; _ga_BVQGVEDG55=GS2.1.s1777119687$o2$g1$t1777119728$j19$l0$h0; _ceo_v2_gk_sid=a0634d36-0886-4231-8074-8acd2a12657b; CENTER_SESSION=NDg0MjFlYjMtNjQ4Ny00OTUxLWJhNjMtM2Q4MWM0NmQwYTg2; __cf_bm=DT4FWbsqEWJFaixDax2ul7wZJotzE9e5LpMzdY3Zc3A-1786511676.58738-1.0.1.1-jcAKtGddzMLLsIzWE6msKMB5LoBidIv1nR0nAwp_h.ImiJ9zrViI0cgy1MpnzZkT7oZ1ckAR1o_Dx8MTOEs1w8FQhu7ZGQDVIIVv_i3fs98b_DcHjZmCSlKM30DB2eoOt1GUI5vDTTQnOMVac4Pf.Q; _ga_ZGDXE0V87X=GS2.1.s1786506922$o25$g1$t1786512423$j54$l0$h0"
+
 BASE_API_URL = "https://api-deliverycenter.baemin.com/v4/management/delivery-status?size=100&orderName=name&orderBy=asc&name=&userId=&phoneNumber="
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
 
@@ -14,24 +23,35 @@ LATEST_DATA = {}
 CUSTOM_SETTINGS = {}
 DATA_LOCK = threading.Lock()
 
+# 1세트 기준 기본 물량표 (표준경북포항북A)
 TARGETS = {
-    "morning":   [126, 126, 126, 126, 144, 186, 198],
-    "afternoon": [120, 120, 120, 120, 126, 132, 132],
-    "evening":   [180, 180, 180, 180, 192, 216, 210],
-    "night":     [174, 174, 174, 174, 198, 186, 180],
+    "morning":   [19, 19, 19, 19, 21, 27, 29],
+    "afternoon": [18, 18, 18, 18, 21, 22, 22],
+    "evening":   [30, 30, 30, 30, 32, 36, 35],
+    "night":     [23, 23, 23, 23, 26, 25, 24],
 }
 DAY_NAMES = ["월", "화", "수", "목", "금", "토", "일"]
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", handlers=[logging.StreamHandler(sys.stdout)])
 log = logging.getLogger("app")
 
-def safe_int(v):
-    try: return int(v) if v is not None else 0
-    except: return 0
+def safe_int(val):
+    if val is None: return 0
+    try: return int(val)
+    except Exception: return 0
 
 def fetch_curl(url):
-    cmd = ["curl", "-s", url, "-H", f"authority: api-deliverycenter.baemin.com", "-H", "accept: application/json", "-H", f"center-id: {CENTER_ID}", "-H", f"cookie: {COOKIE}", "-H", f"user-agent: {UA}", "--compressed"]
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=20).stdout
+    cmd = [
+        "curl", "-s", url,
+        "-H", "authority: api-deliverycenter.baemin.com",
+        "-H", "accept: application/json",
+        "-H", f"center-id: {CENTER_ID}",
+        "-H", f"cookie: {COOKIE}",
+        "-H", f"user-agent: {UA}",
+        "--compressed"
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+    return res.stdout
 
 def collect_loop():
     global LATEST_DATA
@@ -40,7 +60,8 @@ def collect_loop():
         try:
             page, all_riders, total_summary, riding_count = 0, [], {}, 0
             while True:
-                raw = fetch_curl(f"{BASE_API_URL}&page={page}")
+                url = f"{BASE_API_URL}&page={page}"
+                raw = fetch_curl(url)
                 if not raw or not raw.strip().startswith("{"): break
                 data = json.loads(raw)
                 if page == 0: total_summary = data.get("deliveryStatusTotalResponse", {})
@@ -81,7 +102,7 @@ def get_processed_data():
     times = CUSTOM_SETTINGS.get("times", {
         "morning_end": 14 if is_weekend else 13,
         "afternoon_end": 17,
-        "evening_end": 24,
+        "evening_end": 20,
     })
 
     if 9 <= hour < times["morning_end"]: active_slot = "morning"
@@ -107,13 +128,15 @@ def get_processed_data():
     }
 
     set_count = CUSTOM_SETTINGS.get("setCount", 6)
-    ratio = set_count / 6.0
-    targets = CUSTOM_SETTINGS.get("targets", {
+    ratio = set_count / 1.0 # 1세트 기준 곱셈
+
+    default_targets = {
         "morning": round(TARGETS["morning"][day_idx] * ratio),
         "afternoon": round(TARGETS["afternoon"][day_idx] * ratio),
         "evening": round(TARGETS["evening"][day_idx] * ratio),
         "night": round(TARGETS["night"][day_idx] * ratio)
-    })
+    }
+    targets = CUSTOM_SETTINGS.get("targets", default_targets)
 
     return {
         "dayName": DAY_NAMES[day_idx], "dayIdx": day_idx, "activeSlot": active_slot,
@@ -123,7 +146,7 @@ def get_processed_data():
     }
 
 def get_html():
-    paths = ["/home/pdm0809/index.html", "/root/index.html", "index.html"]
+    paths = [os.path.expanduser("~/index.html"), "/home/pdm0809/index.html", "/root/index.html", "index.html"]
     for p in paths:
         if os.path.exists(p):
             try:
@@ -164,3 +187,4 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     threading.Thread(target=collect_loop, daemon=True).start()
     HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+
