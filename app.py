@@ -71,12 +71,32 @@ def get_processed_data():
     hour, day_idx = now.hour, 6 if now.weekday() == 6 else now.weekday()
     is_weekend = (day_idx in (5, 6))
     times = {"morning_end": 14 if is_weekend else 13, "afternoon_end": 17, "evening_end": 24}
+
     if 9 <= hour < times["morning_end"]: active_slot = "morning"
     elif times["morning_end"] <= hour < times["afternoon_end"]: active_slot = "afternoon"
     elif times["afternoon_end"] <= hour < times["evening_end"]: active_slot = "evening"
     else: active_slot = "night"
+
+    # 시간대별 정밀 동적 합산 (09~24시 SLA)
+    m_done, a_done, e_done, n_done = 0, 0, 0, 0
+    for r in data.get("riderList", []):
+        for h_item in r.get("hourlyCompleted", []):
+            h_num = h_item.get("hour", 0)
+            h_cnt = h_item.get("count", 0)
+            if 9 <= h_num < times["morning_end"]: m_done += h_cnt
+            elif times["morning_end"] <= h_num < times["afternoon_end"]: a_done += h_cnt
+            elif times["afternoon_end"] <= h_num < times["evening_end"]: e_done += h_cnt
+            elif times["evening_end"] <= h_num < 24: n_done += h_cnt
+
+    computed_total = {
+        "totalMorningCompleted": m_done,
+        "totalLunchCompleted": a_done,
+        "totalDinnerCompleted": e_done,
+        "totalNightCompleted": n_done
+    }
+
     targets = {"morning": round(TARGETS["morning"][day_idx]), "afternoon": round(TARGETS["afternoon"][day_idx]), "evening": round(TARGETS["evening"][day_idx]), "night": round(TARGETS["night"][day_idx])}
-    return {"dayName": DAY_NAMES[day_idx], "dayIdx": day_idx, "activeSlot": active_slot, "updatedAt": data.get("time", "-"), "total": data.get("total", {}), "targets": targets, "times": times, "ridingCount": data.get("ridingCount", 0), "riderList": data.get("riderList", []), "isCustom": False, "baseTargets": TARGETS, "setCount": 6}
+    return {"dayName": DAY_NAMES[day_idx], "dayIdx": day_idx, "activeSlot": active_slot, "updatedAt": data.get("time", "-"), "total": computed_total, "targets": targets, "times": times, "ridingCount": data.get("ridingCount", 0), "riderList": data.get("riderList", []), "isCustom": False, "baseTargets": TARGETS, "setCount": 6}
 
 def get_html():
     paths = ["/home/pdm0809/index.html", "/root/index.html", "index.html"]
