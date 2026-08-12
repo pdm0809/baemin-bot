@@ -1,6 +1,7 @@
 import subprocess, json, requests, time, logging, threading, sys, os
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse
 
 PORT = 80
 CENTER_ID = "DP2511060448"
@@ -10,8 +11,15 @@ BASE_API_URL = "https://api-deliverycenter.baemin.com/v4/management/delivery-sta
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"
 
 LATEST_DATA = {}
+CUSTOM_SETTINGS = {}
 DATA_LOCK = threading.Lock()
-TARGETS = {"morning": [126,126,126,126,144,186,198], "afternoon": [120,120,120,120,126,132,132], "evening": [180,180,180,180,192,216,210], "night": [174,174,174,174,198,186,180]}
+
+TARGETS = {
+    "morning":   [126, 126, 126, 126, 144, 186, 198],
+    "afternoon": [120, 120, 120, 120, 126, 132, 132],
+    "evening":   [180, 180, 180, 180, 192, 216, 210],
+    "night":     [174, 174, 174, 174, 198, 186, 180],
+}
 DAY_NAMES = ["월", "화", "수", "목", "금", "토", "일"]
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", handlers=[logging.StreamHandler(sys.stdout)])
@@ -70,14 +78,17 @@ def get_processed_data():
     now = datetime.now()
     hour, day_idx = now.hour, 6 if now.weekday() == 6 else now.weekday()
     is_weekend = (day_idx in (5, 6))
-    times = {"morning_end": 14 if is_weekend else 13, "afternoon_end": 17, "evening_end": 24}
+    times = CUSTOM_SETTINGS.get("times", {
+        "morning_end": 14 if is_weekend else 13,
+        "afternoon_end": 17,
+        "evening_end": 24,
+    })
 
     if 9 <= hour < times["morning_end"]: active_slot = "morning"
     elif times["morning_end"] <= hour < times["afternoon_end"]: active_slot = "afternoon"
     elif times["afternoon_end"] <= hour < times["evening_end"]: active_slot = "evening"
     else: active_slot = "night"
 
-    # 시간대별 정밀 동적 합산 (09~24시 SLA)
     m_done, a_done, e_done, n_done = 0, 0, 0, 0
     for r in data.get("riderList", []):
         for h_item in r.get("hourlyCompleted", []):
@@ -95,8 +106,21 @@ def get_processed_data():
         "totalNightCompleted": n_done
     }
 
-    targets = {"morning": round(TARGETS["morning"][day_idx]), "afternoon": round(TARGETS["afternoon"][day_idx]), "evening": round(TARGETS["evening"][day_idx]), "night": round(TARGETS["night"][day_idx])}
-    return {"dayName": DAY_NAMES[day_idx], "dayIdx": day_idx, "activeSlot": active_slot, "updatedAt": data.get("time", "-"), "total": computed_total, "targets": targets, "times": times, "ridingCount": data.get("ridingCount", 0), "riderList": data.get("riderList", []), "isCustom": False, "baseTargets": TARGETS, "setCount": 6}
+    set_count = CUSTOM_SETTINGS.get("setCount", 6)
+    ratio = set_count / 6.0
+    targets = CUSTOM_SETTINGS.get("targets", {
+        "morning": round(TARGETS["morning"][day_idx] * ratio),
+        "afternoon": round(TARGETS["afternoon"][day_idx] * ratio),
+        "evening": round(TARGETS["evening"][day_idx] * ratio),
+        "night": round(TARGETS["night"][day_idx] * ratio)
+    })
+
+    return {
+        "dayName": DAY_NAMES[day_idx], "dayIdx": day_idx, "activeSlot": active_slot,
+        "updatedAt": data.get("time", "-"), "total": computed_total,
+        "targets": targets, "times": times, "ridingCount": data.get("ridingCount", 0),
+        "riderList": data.get("riderList", []), "isCustom": bool(CUSTOM_SETTINGS), "baseTargets": TARGETS, "setCount": set_count
+    }
 
 def get_html():
     paths = ["/home/pdm0809/index.html", "/root/index.html", "index.html"]
@@ -123,6 +147,18 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(body)
+
+    def do_POST(self):
+        if self.path == "/api/settings":
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length)
+            global CUSTOM_SETTINGS
+            CUSTOM_SETTINGS = json.loads(body.decode("utf-8"))
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"OK")
+
     def log_message(self, format, *args): return
 
 if __name__ == "__main__":
