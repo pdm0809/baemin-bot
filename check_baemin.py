@@ -1,9 +1,9 @@
-import subprocess
 import json
 import requests
 import sys
 import logging
 from datetime import datetime
+from playwright.sync_api import sync_playwright
 
 # ==============================================================================
 # [설정 항목]
@@ -11,7 +11,7 @@ from datetime import datetime
 GAS_URL = "https://script.google.com/macros/s/AKfycbybEopFhrpBc1IfVtgoWatjNcjq-ucF_i3jnCRpNiUVQ-GNhVkEbt6SjAq9Bv0ipM5h/exec"
 CENTER_ID = "DP2511060448"
 
-# 최근 전달해 주신 세션 쿠키
+# 최신 세션 쿠키
 COOKIE = "dsid=8dff4928-c182-47d4-8772-e2a5a402a157; _wp_uid=1-b64e91cb5ed11a28894cc86e59e4b722-s1776862146.426964|windows_10|chrome-dy1hgz; tbid=6c55babc-a664-4fba-bace-5efe4648c258; _hjSessionUser_5123796=eyJpZCI6IjU3NGNiYzc4LWM4YjctNWI2Yy04MDg4LTcxZDFmYTc5ODVlZCIsImNyZWF0ZWQiOjE3NzY5NDk4MTgzNDEsImV4aXN0aW5nIjp0cnVlfQ==; _ga_QZ54WQ25KW=GS2.1.s1777119700$o2$g1$t1777119717$j43$l0$h0; _ga=GA1.1.1294575212.1776949812; _ga_DD6D4M7LEB=GS2.1.s1777119699$o2$g1$t1777119718$j41$l0$h0; _ga_BVQGVEDG55=GS2.1.s1777119687$o2$g1$t1777119728$j19$l0$h0; _ceo_v2_gk_sid=a0634d36-0886-4231-8074-8acd2a12657b; CENTER_SESSION=NDg0MjFlYjMtNjQ4Ny00OTUxLWJhNjMtM2Q4MWM0NmQwYTg2; __cf_bm=DT4FWbsqEWJFaixDax2ul7wZJotzE9e5LpMzdY3Zc3A-1786511676.58738-1.0.1.1-jcAKtGddzMLLsIzWE6msKMB5LoBidIv1nR0nAwp_h.ImiJ9zrViI0cgy1MpnzZkT7oZ1ckAR1o_Dx8MTOEs1w8FQhu7ZGQDVIIVv_i3fs98b_DcHjZmCSlKM30DB2eoOt1GUI5vDTTQnOMVac4Pf.Q; _ga_ZGDXE0V87X=GS2.1.s1786506922$o25$g1$t1786512423$j54$l0$h0"
 
 BASE_API_URL = "https://api-deliverycenter.baemin.com/v4/management/delivery-status?size=100&orderName=name&orderBy=asc&name=&userId=&phoneNumber="
@@ -34,30 +34,6 @@ def safe_int(val):
         return 0
 
 
-def fetch_curl(url):
-    """실제 Chrome 브라우저 헤더를 정밀 모사한 curl 요청"""
-    cmd = [
-        "curl", "-s", url,
-        "-H", "authority: api-deliverycenter.baemin.com",
-        "-H", "accept: application/json, text/plain, */*",
-        "-H", "accept-language: ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-        "-H", f"center-id: {CENTER_ID}",
-        "-H", f"cookie: {COOKIE}",
-        "-H", "origin: https://deliverycenter.baemin.com",
-        "-H", "referer: https://deliverycenter.baemin.com/",
-        "-H", 'sec-ch-ua: "Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-        "-H", "sec-ch-ua-mobile: ?0",
-        "-H", 'sec-ch-ua-platform: "Windows"',
-        "-H", "sec-fetch-dest: empty",
-        "-H", "sec-fetch-mode: cors",
-        "-H", "sec-fetch-site: same-site",
-        "-H", f"user-agent: {UA}",
-        "--compressed"
-    ]
-    res = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
-    return res.stdout
-
-
 def push_to_gas(payload):
     headers = {"Content-Type": "application/json"}
     resp = requests.post(GAS_URL, data=json.dumps(payload), headers=headers, timeout=15)
@@ -65,87 +41,105 @@ def push_to_gas(payload):
 
 
 def collect_all_data():
-    page = 0
     all_riders = []
     total_summary = {}
     riding_count = 0
 
-    while True:
-        url = f"{BASE_API_URL}&page={page}"
-        raw = fetch_curl(url)
+    with sync_playwright() as p:
+        # 가상 크롬 브라우저 실행
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(user_agent=UA)
+        page_obj = context.new_page()
 
-        if not raw or not raw.strip():
-            raise ValueError("API 응답이 비어있습니다.")
+        # 1. 배민 메인 페이지 접속으로 방화벽(자바스크립트 보안) 통과
+        log.info("🌐 크롬 브라우저 가동 및 배민 방화벽 통과 중...")
+        page_obj.goto("https://deliverycenter.baemin.com/", wait_until="networkidle", timeout=30000)
 
-        if not raw.strip().startswith("{"):
-            log.error(f"❌ 응답 내용 미리보기: {raw[:200]}")
-            raise ValueError("JSON 응답이 수신되지 않았습니다.")
+        page_num = 0
+        while True:
+            url = f"{BASE_API_URL}&page={page_num}"
+            
+            # 2. 브라우저 내부 세션으로 API 타격
+            response = context.request.get(
+                url,
+                headers={
+                    "authority": "api-deliverycenter.baemin.com",
+                    "accept": "application/json, text/plain, */*",
+                    "center-id": CENTER_ID,
+                    "cookie": COOKIE,
+                    "origin": "https://deliverycenter.baemin.com",
+                    "referer": "https://deliverycenter.baemin.com/",
+                }
+            )
 
-        data = json.loads(raw)
+            if response.status not in (200, 201):
+                log.error(f"❌ HTTP {response.status}: {response.text()[:200]}")
+                raise PermissionError(f"API 요청 실패 (Status: {response.status})")
 
-        if isinstance(data, dict) and data.get("status") in (401, 403):
-            raise PermissionError("쿠키 세션이 만료되었거나 접근이 차단되었습니다.")
+            data = response.json()
 
-        if page == 0:
-            total_summary = data.get("deliveryStatusTotalResponse", {})
+            if page_num == 0:
+                total_summary = data.get("deliveryStatusTotalResponse", {})
 
-        rider_rows = data.get("data", [])
-        for r in rider_rows:
-            ac = r.get("deliveryAcceptanceCount", {}) or {}
-            pt = r.get("deliveryPeakTimeCount", {}) or {}
-            st = r.get("status", {})
+            rider_rows = data.get("data", [])
+            for r in rider_rows:
+                ac = r.get("deliveryAcceptanceCount", {}) or {}
+                pt = r.get("deliveryPeakTimeCount", {}) or {}
+                st = r.get("status", {})
 
-            status_code = st.get("code", "READY") if isinstance(st, dict) else str(st)
-            status_desc = st.get("desc", "운행 종료") if isinstance(st, dict) else ""
+                status_code = st.get("code", "READY") if isinstance(st, dict) else str(st)
+                status_desc = st.get("desc", "운행 종료") if isinstance(st, dict) else ""
 
-            if status_code == "DELIVERING":
-                riding_count += 1
+                if status_code == "DELIVERING":
+                    riding_count += 1
 
-            all_riders.append({
-                "name": r.get("name", ""),
-                "userId": r.get("userId", ""),
-                "phoneNumber": r.get("phoneNumber", ""),
-                "status": {
-                    "code": status_code,
-                    "desc": status_desc
-                },
-                "acceptance": {
-                    "foodComplete": safe_int(ac.get("foodComplete")),
-                    "bmartComplete": safe_int(ac.get("bmartComplete")),
-                    "storeComplete": safe_int(ac.get("storeComplete")),
-                    "totalComplete": safe_int(ac.get("totalComplete")),
-                    "allDayComplete": safe_int(ac.get("allDayComplete")),
-                    "slaOutComplete": safe_int(ac.get("slaOutComplete")),
+                all_riders.append({
+                    "name": r.get("name", ""),
+                    "userId": r.get("userId", ""),
+                    "phoneNumber": r.get("phoneNumber", ""),
+                    "status": {
+                        "code": status_code,
+                        "desc": status_desc
+                    },
+                    "acceptance": {
+                        "foodComplete": safe_int(ac.get("foodComplete")),
+                        "bmartComplete": safe_int(ac.get("bmartComplete")),
+                        "storeComplete": safe_int(ac.get("storeComplete")),
+                        "totalComplete": safe_int(ac.get("totalComplete")),
+                        "allDayComplete": safe_int(ac.get("allDayComplete")),
+                        "slaOutComplete": safe_int(ac.get("slaOutComplete")),
 
-                    "foodReject": safe_int(ac.get("foodReject")),
-                    "bmartReject": safe_int(ac.get("bmartReject")),
-                    "storeReject": safe_int(ac.get("storeReject")),
-                    "totalReject": safe_int(ac.get("totalReject")),
+                        "foodReject": safe_int(ac.get("foodReject")),
+                        "bmartReject": safe_int(ac.get("bmartReject")),
+                        "storeReject": safe_int(ac.get("storeReject")),
+                        "totalReject": safe_int(ac.get("totalReject")),
 
-                    "foodCancel": safe_int(ac.get("foodCancel")),
-                    "bmartCancel": safe_int(ac.get("bmartCancel")),
-                    "storeCancel": safe_int(ac.get("storeCancel")),
-                    "totalCancel": safe_int(ac.get("totalCancel")),
+                        "foodCancel": safe_int(ac.get("foodCancel")),
+                        "bmartCancel": safe_int(ac.get("bmartCancel")),
+                        "storeCancel": safe_int(ac.get("storeCancel")),
+                        "totalCancel": safe_int(ac.get("totalCancel")),
 
-                    "foodRiderFault": safe_int(ac.get("foodRiderFault")),
-                    "bmartRiderFault": safe_int(ac.get("bmartRiderFault")),
-                    "storeRiderFault": safe_int(ac.get("storeRiderFault")),
-                    "totalRiderFault": safe_int(ac.get("totalRiderFault")),
-                },
-                "peakTime": {
-                    "morning": safe_int(pt.get("morning")),
-                    "afternoon": safe_int(pt.get("afternoon")),
-                    "evening": safe_int(pt.get("evening")),
-                    "midnight": safe_int(pt.get("midnight"))
-                },
-                "hourlyCompleted": r.get("hourlyCompleted", [])
-            })
+                        "foodRiderFault": safe_int(ac.get("foodRiderFault")),
+                        "bmartRiderFault": safe_int(ac.get("bmartRiderFault")),
+                        "storeRiderFault": safe_int(ac.get("storeRiderFault")),
+                        "totalRiderFault": safe_int(ac.get("totalRiderFault")),
+                    },
+                    "peakTime": {
+                        "morning": safe_int(pt.get("morning")),
+                        "afternoon": safe_int(pt.get("afternoon")),
+                        "evening": safe_int(pt.get("evening")),
+                        "midnight": safe_int(pt.get("midnight"))
+                    },
+                    "hourlyCompleted": r.get("hourlyCompleted", [])
+                })
 
-        total_pages = data.get("totalPage", 1)
-        page += 1
+            total_pages = data.get("totalPage", 1)
+            page_num += 1
 
-        if page >= total_pages:
-            break
+            if page_num >= total_pages:
+                break
+
+        browser.close()
 
     return {
         "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -156,11 +150,11 @@ def collect_all_data():
 
 
 if __name__ == "__main__":
-    log.info("🚀 [배민 데이터 수집기] 수집 시작")
+    log.info("🚀 [Playwright 크롬 가상 수집기] 데이터 수집 시작")
     try:
         payload = collect_all_data()
         resp = push_to_gas(payload)
         log.info(f"✔️ 전송 완료 ({resp}) | 총 기사 수: {len(payload['riderList'])}명 | 운행중: {payload['ridingCount']}명")
     except Exception as exc:
-        log.error(f"❌ 오류 발생: {exc}")
+        log.error(f"❌ 수집 중 오류 발생: {exc}")
         sys.exit(1)
