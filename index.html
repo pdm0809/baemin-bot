@@ -29,25 +29,23 @@
     .irow{display:flex;justify-content:space-between;align-items:center;margin-bottom:3vw;}
     .ilabel{font-size:4vw;color:#ccc;}
     .ifield{background:#2c2c2e;color:#fff;border:1px solid #444;border-radius:8px;padding:2vw 3vw;font-size:4.5vw;font-weight:700;width:28vw;text-align:center;}
+    .btn-auto{background:#1c1c1e;color:#34C759;border:1px solid #34C759;padding:1.5vw 2vw;font-size:3.5vw;border-radius:6px;font-weight:bold;cursor:pointer;}
 
     .rider-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000;color:#fff;z-index:1000;flex-direction:column;}
     .rider-header{background:#1c1c1e;color:#fff;padding:3vw 4vw;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333;flex-shrink:0;}
     .table-wrapper{flex:1; overflow:auto; -webkit-overflow-scrolling:touch; background:#000;}
     .rider-table{width:max-content; border-collapse:collapse; font-size:3.2vw; color:#ddd; border-spacing:0;}
     .rider-table th{background:#1c1c1e; color:#bbb; font-weight:700; text-align:center; border:1px solid #333; padding:2vw 2.5vw; vertical-align:middle; white-space:nowrap; cursor:pointer;}
-    .rider-table th:active{background:#333;}
     .rider-table td{padding:2vw 2.5vw; text-align:center; border:1px solid #222; white-space:nowrap; background:#111; color:#eee;}
     
     .sticky-name{position:sticky; left:0; z-index:5; background:#1c1c1e !important; border-right:2px solid #444 !important; font-weight:bold; color:#fff !important;}
     td.sticky-name{background:#161616 !important; color:#fff !important;}
-    
     .sum-row td{background:#222 !important; font-weight:900; color:#34C759; position:sticky; top:0; z-index:4;}
     .sum-row td.sticky-name{z-index:6; background:#222 !important; color:#34C759 !important;}
     
     .status-badge{padding:0.6vw 2vw; border-radius:12px; font-size:2.8vw; font-weight:700; display:inline-block;}
     .status-delivering{background:#0a3a1a; color:#34C759;}
     .status-ready{background:#222; color:#888;}
-    
     #toast{visibility:hidden;min-width:250px;margin-left:-125px;background-color:#333;color:#fff;text-align:center;border-radius:8px;padding:4vw;position:fixed;z-index:3000;left:50%;bottom:10vw;font-size:4vw;font-weight:bold;opacity:0;transition:opacity 0.3s, bottom 0.3s;box-shadow:0 4px 6px rgba(0,0,0,0.5);}
     #toast.show{visibility:visible;opacity:1;bottom:15vw;}
   </style>
@@ -67,8 +65,8 @@
 
   <div class='header'>
     <div style='display:flex;align-items:center;gap:1.5vw;'>
-      <div id='dayName' style='font-size:7.5vw;font-weight:900;color:#fff;white-space:nowrap;'></div>
-      <div id='ridingCount' onclick='openRiders()' style='background:#2c2c2e;color:#34C759;font-size:3.8vw;font-weight:900;padding:1.5vw 2.5vw;border-radius:8px;cursor:pointer;white-space:nowrap;'>🛵 -명</div>
+      <div id='dayName' style='font-size:7.5vw;font-weight:900;'></div>
+      <div id='ridingCount' onclick='openRiders()' style='background:#2c2c2e;color:#34C759;font-size:3.8vw;font-weight:900;padding:1.5vw 2.5vw;border-radius:8px;cursor:pointer;'>🛵 -명</div>
     </div>
     <div style='display:flex;gap:1.5vw;'>
       <button class='btn' style='background:#2c2c2e;color:#FF9500;padding:2vw 3vw;' onclick='openSettings()'>⚙️</button>
@@ -82,14 +80,16 @@
     <div></div>
     <div style='text-align:right;'>
       <div style='color:#666;font-size:3.5vw;font-weight:bold;margin-bottom:2px;'>오늘 합계 (SLA 09~24시)</div>
-      <div id='totalDone' style='font-size:16vw;font-weight:900;color:#fff;line-height:1;'>-</div>
+      <div id='totalDone' style='font-size:16vw;font-weight:900;line-height:1;'>-</div>
       <div id='updatedAt' style='color:#444;font-size:3vw;margin-top:6px;'></div>
     </div>
   </div>
 
+  <!-- 수동 설정 모달 (토욜 / 일욜 버튼 나란히 배치) -->
   <div id='modal' class='modal'>
     <div class='modal-box'>
       <div style='font-size:6vw;font-weight:900;margin-bottom:4vw;'>⚙️ 수동 설정</div>
+      
       <div class='sec-title' style='display:flex;justify-content:space-between;align-items:center;margin-bottom:3vw;'>
         <span style='font-size:4.5vw;font-weight:700;color:#FF9500;'>📦 목표세트</span>
         <div style='display:flex;align-items:center;background:#2c2c2e;border-radius:8px;padding:1vw;'>
@@ -97,12 +97,27 @@
           <div id='setNumberDisplay' style='color:#fff;font-size:4.5vw;font-weight:900;width:5vw;text-align:center;'>6</div>
           <div onclick='changeSetCount(1)' style='color:#FF9500;font-size:4.5vw;font-weight:900;padding:1vw 3vw;cursor:pointer;'>➕</div>
         </div>
+        <div style='display:flex;gap:1.5vw;'>
+          <button class='btn-auto' style='padding:1.5vw 2vw;' onclick='fillSaturdayTargets()'>토욜⬇️</button>
+          <button class='btn-auto' style='padding:1.5vw 2vw;' onclick='fillSundayTargets()'>일욜⬇️</button>
+        </div>
       </div>
+  
       <div class='irow'><span class='ilabel'>🌅 아침/점심피크</span><input class='ifield' id='t_morning' type='number'></div>
       <div class='irow'><span class='ilabel'>☀️ 오후논피크</span><input class='ifield' id='t_afternoon' type='number'></div>
       <div class='irow'><span class='ilabel'>🌆 저녁피크</span><input class='ifield' id='t_evening' type='number'></div>
       <div class='irow'><span class='ilabel'>🌙 심야</span><input class='ifield' id='t_night' type='number'></div>
-      <button class='btn' style='width:100%;background:#FF9500;color:#fff;padding:4vw;font-size:4.5vw;margin-top:4vw;' onclick='closeSettings()'>닫기</button>
+      
+      <div class='sec-title'>⏰ 시간대 종료시각</div>
+      <div class='irow'><span class='ilabel'>아침/점심피크 종료</span><input class='ifield' id='te_morning' type='number' min='6' max='23'></div>
+      <div class='irow'><span class='ilabel'>오후논피크 종료</span><input class='ifield' id='te_afternoon' type='number' min='6' max='23'></div>
+      <div class='irow'><span class='ilabel'>저녁피크 종료</span><input class='ifield' id='te_evening' type='number' min='6' max='23'></div>
+      
+      <div style='display:flex;gap:3vw;margin-top:5vw;'>
+        <button class='btn' style='flex:1;background:#3a3a3c;color:#fff;padding:4vw;font-size:4.5vw;' onclick='executeReset()'>기본값 복원</button>
+        <button class='btn' style='flex:1;background:#FF9500;color:#fff;padding:4vw;font-size:4.5vw;' onclick='saveSettings()'>저장</button>
+      </div>
+      <button class='btn' style='width:100%;background:#2c2c2e;color:#aaa;padding:4vw;font-size:4.5vw;margin-top:3vw;' onclick='closeSettings()'>닫기</button>
     </div>
   </div>
 
@@ -131,8 +146,6 @@
   </div>
 
   <script>
-    var GAS_URL = "https://script.google.com/macros/s/AKfycbybEopFhrpBc1IfVtgoWatjNcjq-ucF_i3jnCRpNiUVQ-GNhVkEbt6SjAq9Bv0ipM5h/exec";
-
     var COLORS={morning:'#FF9500',afternoon:'#34C759',evening:'#FF3B30',night:'#AF52DE'};
     var NAMES={morning:'아침/점심피크',afternoon:'오후논피크',evening:'저녁피크',night:'심야'};
     var ORDER=['morning','afternoon','evening','night'];
@@ -140,12 +153,12 @@
     var currentData=null;
     var isRefreshing = false;
 
-    var statusFilter = 'DELIVERING'; // 기본값: 운행중 (클릭 시 운행종료 전환)
+    var statusFilter = 'ALL'; 
     var sortCol = 'allDay';          
     var sortAsc = false;             
 
     function unlockDashboard() {
-      var pwd = document.getElementById("chogok-pwd").value;
+      var pwd = (document.getElementById("chogok-pwd").value || '').trim();
       if (pwd === "8289") {
         document.getElementById("security-login-screen").style.display = "none";
       } else {
@@ -162,9 +175,10 @@
     }
 
     function render(d){
+      if(!d)return;
       currentData=d;
-      document.getElementById('dayName').textContent=d.dayName+'요일';
-      document.getElementById('updatedAt').textContent='신호: '+d.updatedAt;
+      document.getElementById('dayName').textContent=(d.dayName||'-')+'요일';
+      document.getElementById('updatedAt').textContent='신호: '+(d.updatedAt||'-');
       
       var activeRiders = d.riderList ? d.riderList.filter(function(r){ var st = r.status ? (r.status.code || r.status) : 'DELIVERING'; return st === 'DELIVERING'; }).length : 0;
       document.getElementById('ridingCount').textContent='🛵 '+activeRiders+'명';
@@ -181,8 +195,8 @@
         html+='<div style="flex:1;">';
         html+='<div style="font-size:6vw;font-weight:900;color:'+(isActive?color:'#555')+'">'+NAMES[id]+'</div>';
         html+='<div style="display:flex;gap:20px;margin-top:10px;">';
-        html+='<div style="text-align:center;"><div style="color:#fff;font-size:1.8rem;font-weight:900;">'+target+'</div><div style="color:#bbb;font-size:0.8rem;font-weight:bold;">목표세트</div></div>';
-        html+='<div style="text-align:center;"><div style="color:#fff;font-size:1.8rem;font-weight:900;">'+done+'</div><div style="color:#bbb;font-size:0.8rem;font-weight:bold;">달성물량</div></div>';
+        html+='<div style="text-align:center;"><div style="font-size:1.8rem;font-weight:900;">'+target+'</div><div style="color:#bbb;font-size:0.8rem;font-weight:bold;">목표세트</div></div>';
+        html+='<div style="text-align:center;"><div style="font-size:1.8rem;font-weight:900;">'+done+'</div><div style="color:#bbb;font-size:0.8rem;font-weight:bold;">달성물량</div></div>';
         html+='</div></div>';
         html+='<div style="text-align:right;">';
         html+='<div style="font-size:'+(isDone?'2rem':'4.5rem')+';font-weight:900;color:'+(isActive?'#fff':'#333')+'">'+(isDone?'달성완료':remain)+'</div>';
@@ -198,12 +212,8 @@
     }
 
     function toggleSort(col) {
-      if (sortCol === col) {
-        sortAsc = !sortAsc;
-      } else {
-        sortCol = col;
-        sortAsc = false;
-      }
+      if (sortCol === col) { sortAsc = !sortAsc; }
+      else { sortCol = col; sortAsc = false; }
       updateRiderTableHTML();
     }
 
@@ -220,8 +230,7 @@
     function updateRiderTableHTML(){
       if(!currentData||!currentData.riderList){return;}
       var filterKeyword = (document.getElementById('searchInput').value || '').trim().toLowerCase();
-      
-      var stLabel = statusFilter === 'DELIVERING' ? ' (운행중만)' : ' (운행종료만)';
+      var stLabel = statusFilter === 'DELIVERING' ? ' (운행중만)' : (statusFilter === 'READY' ? ' (운행종료만)' : ' (전체)');
 
       var theadHtml = '<tr>' +
         '<th rowspan="2" class="sticky-name" onclick="toggleSort(\'name\')">이름' + getSortIcon('name') + '</th>' +
@@ -259,24 +268,14 @@
       list.sort(function(a, b) {
         var accA = a.acceptance || a.deliveryAcceptanceCount || {}, ptA = a.peakTime || a.deliveryPeakTimeCount || {};
         var accB = b.acceptance || b.deliveryAcceptanceCount || {}, ptB = b.peakTime || b.deliveryPeakTimeCount || {};
-        
         var valA = 0, valB = 0;
         if (sortCol === 'name') { valA = a.name || ''; valB = b.name || ''; }
         else if (sortCol === 'userId') { valA = a.userId || ''; valB = b.userId || ''; }
         else if (sortCol === 'allDay') { valA = accA.allDayComplete !== undefined ? accA.allDayComplete : (accA.totalComplete || 0); valB = accB.allDayComplete !== undefined ? accB.allDayComplete : (accB.totalComplete || 0); }
         else if (sortCol === 'cTot') { valA = accA.totalComplete || 0; valB = accB.totalComplete || 0; }
         else if (sortCol === 'rTot') { valA = accA.totalReject || 0; valB = accB.totalReject || 0; }
-        else if (sortCol === 'cFood') { valA = accA.foodComplete || 0; valB = accB.foodComplete || 0; }
-        else if (sortCol === 'cBmart') { valA = accA.bmartComplete || 0; valB = accB.bmartComplete || 0; }
-        else if (sortCol === 'cStore') { valA = accA.storeComplete || 0; valB = accB.storeComplete || 0; }
-        else if (sortCol === 'pM') { valA = ptA.morning || 0; valB = ptB.morning || 0; }
-        else if (sortCol === 'pA') { valA = ptA.afternoon || 0; valB = ptB.afternoon || 0; }
-        else if (sortCol === 'pE') { valA = ptA.evening || 0; valB = ptB.evening || 0; }
-        else if (sortCol === 'pN') { valA = ptA.midnight || 0; valB = ptB.midnight || 0; }
 
-        if (typeof valA === 'string') {
-          return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        }
+        if (typeof valA === 'string') { return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA); }
         return sortAsc ? valA - valB : valB - valA;
       });
 
@@ -315,7 +314,6 @@
         rowsHtml += '<td>' + (r.userId || '-') + '</td>';
         rowsHtml += '<td>' + (r.phoneNumber || '-') + '</td>';
         rowsHtml += '<td style="font-weight:900; color:#66b2ff; background:#002244;">' + allDay + '</td>';
-        
         rowsHtml += '<td>' + cFood + '</td><td>' + cBmart + '</td><td>' + cStore + '</td><td style="font-weight:bold;">' + cTot + '</td>';
         rowsHtml += '<td style="font-weight:bold; color:#FF3B30;">' + rTot + '</td><td>' + rFood + '</td><td>' + rBmart + '</td><td>' + rStore + '</td>';
         rowsHtml += '<td style="font-weight:bold;">' + canTot + '</td><td>' + canFood + '</td><td>' + canBmart + '</td><td>' + canStore + '</td>';
@@ -329,10 +327,9 @@
         
         for(var h = 6; h <= 29; h++) {
           var targetH = h >= 24 ? h - 24 : h;
-          var val = hMap[targetH] !== undefined ? hMap[targetH] : (hMap[h] !== undefined ? hMap[h] : 0);
-          var idx = h - 6;
-          sumHourly[idx] += val;
-          rowsHtml += '<td>' + (val > 0 ? val : 0) + '</td>';
+          var val = hMap[targetH] !== undefined ? hMap[targetH] : 0;
+          sumHourly[h-6] += val;
+          rowsHtml += '<td>' + val + '</td>';
         }
         rowsHtml += '</tr>';
       });
@@ -352,7 +349,7 @@
       sumRowHtml += '</tr>';
 
       document.getElementById('riderTableHead').innerHTML = theadHtml + sumRowHtml;
-      document.getElementById('riderTableBody').innerHTML = rowsHtml || '<tr><td colspan="45" style="padding:10vw; text-align:center;">조건에 맞는 기사 데이터가 없습니다.</td></tr>';
+      document.getElementById('riderTableBody').innerHTML = rowsHtml || '<tr><td colspan="45" style="padding:10vw;">데이터가 없습니다.</td></tr>';
     }
 
     function openRiders(){
@@ -363,9 +360,79 @@
     }
     function closeRiders(){document.getElementById('riderModal').style.display='none';}
 
+    function openSettings(){
+      if(!currentData)return;
+      var t=currentData.targets||{}, ti=currentData.times||{};
+      document.getElementById('t_morning').value=typeof t.morning==='object'?t.morning[currentData.dayIdx]:(t.morning||0);
+      document.getElementById('t_afternoon').value=typeof t.afternoon==='object'?t.afternoon[currentData.dayIdx]:(t.afternoon||0);
+      document.getElementById('t_evening').value=typeof t.evening==='object'?t.evening[currentData.dayIdx]:(t.evening||0);
+      document.getElementById('t_night').value=typeof t.night==='object'?t.night[currentData.dayIdx]:(t.night||0);
+      document.getElementById('te_morning').value=ti.morning_end||13;
+      document.getElementById('te_afternoon').value=ti.afternoon_end||17;
+      document.getElementById('te_evening').value=ti.evening_end||24;
+      document.getElementById('setNumberDisplay').textContent=currentData.setCount||6; 
+      history.pushState({modal:true},'',location.href); document.getElementById('modal').style.display='block';
+    }
+    function closeSettings(){document.getElementById('modal').style.display='none';}
+    
+    function changeSetCount(delta) {
+      if(!currentData || !currentData.baseTargets) return;
+      var el = document.getElementById('setNumberDisplay');
+      var c = parseInt(el.textContent) || 6;
+      var n = c + delta;
+      if(n < 1) n = 1; if(n > 99) n = 99;
+      el.textContent = n;
+      var dIdx = currentData.dayIdx;
+      var base = currentData.baseTargets;
+      document.getElementById('t_morning').value = Math.round((base.morning[dIdx] / 6) * n);
+      document.getElementById('t_afternoon').value = Math.round((base.afternoon[dIdx] / 6) * n);
+      document.getElementById('t_evening').value = Math.round((base.evening[dIdx] / 6) * n);
+      document.getElementById('t_night').value = Math.round((base.night[dIdx] / 6) * n);
+    }
+
+    // 토요일 원클릭 자동입력
+    function fillSaturdayTargets(){
+      var n = parseInt(document.getElementById('setNumberDisplay').textContent) || 6;
+      var base = currentData.baseTargets || {morning:[126,126,126,126,144,186,198],afternoon:[120,120,120,120,126,132,132],evening:[180,180,180,180,192,216,210],night:[174,174,174,174,198,186,180]};
+      document.getElementById('t_morning').value = Math.round((base.morning / 6) * n);
+      document.getElementById('t_afternoon').value = Math.round((base.afternoon / 6) * n);
+      document.getElementById('t_evening').value = Math.round((base.evening / 6) * n);
+      document.getElementById('t_night').value = Math.round((base.night / 6) * n);
+      document.getElementById('te_morning').value = 14;
+      document.getElementById('te_afternoon').value = 17;
+      document.getElementById('te_evening').value = 24;
+      showToast(n + '세트 기준 토요일 물량이 입력되었습니다.');
+    }
+
+    // 일요일 원클릭 자동입력
+    function fillSundayTargets(){
+      var n = parseInt(document.getElementById('setNumberDisplay').textContent) || 6;
+      var base = currentData.baseTargets || {morning:[126,126,126,126,144,186,198],afternoon:[120,120,120,120,126,132,132],evening:[180,180,180,180,192,216,210],night:[174,174,174,174,198,186,180]};
+      document.getElementById('t_morning').value = Math.round((base.morning / 6) * n);
+      document.getElementById('t_afternoon').value = Math.round((base.afternoon / 6) * n);
+      document.getElementById('t_evening').value = Math.round((base.evening / 6) * n);
+      document.getElementById('t_night').value = Math.round((base.night / 6) * n);
+      document.getElementById('te_morning').value = 14;
+      document.getElementById('te_afternoon').value = 17;
+      document.getElementById('te_evening').value = 24;
+      showToast(n + '세트 기준 일요일 물량이 입력되었습니다.');
+    }
+
+    function saveSettings(){
+      var s={setCount:parseInt(document.getElementById('setNumberDisplay').textContent)||6,targets:{morning:parseInt(document.getElementById('t_morning').value)||0,afternoon:parseInt(document.getElementById('t_afternoon').value)||0,evening:parseInt(document.getElementById('t_evening').value)||0,night:parseInt(document.getElementById('t_night').value)||0},times:{morning_end:parseInt(document.getElementById('te_morning').value)||0,afternoon_end:parseInt(document.getElementById('te_afternoon').value)||0,evening_end:parseInt(document.getElementById('te_evening').value)||0}};
+      fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(s)})
+        .then(function(){ closeSettings(); loadData(); showToast('✔️ 설정이 저장됐어요!'); })
+        .catch(function(){ showToast('저장 실패!'); });
+    }
+
+    function executeReset(){
+      fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({})})
+        .then(function(){ closeSettings(); loadData(); showToast('🔄 기본값으로 복원!'); });
+    }
+
     function loadData(){
       var btn=document.getElementById('refreshBtn'); btn.textContent='⏳...';
-      fetch(GAS_URL + "?mode=json")
+      fetch('/api/data')
         .then(function(res){ return res.json(); })
         .then(function(d){
           render(d);
@@ -381,7 +448,7 @@
     function refreshRiderData(){
       if(isRefreshing) return; isRefreshing = true;
       var btn=document.getElementById('riderRefreshBtn'); btn.textContent='⏳...';
-      fetch(GAS_URL + "?mode=json")
+      fetch('/api/data')
         .then(function(res){ return res.json(); })
         .then(function(d){
           render(d);
