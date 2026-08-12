@@ -85,7 +85,7 @@
     </div>
   </div>
 
-  <!-- 수동 설정 모달 (완전 복구) -->
+  <!-- 수동 설정 모달 (토욜 / 일욜 버튼 나란히 배치) -->
   <div id='modal' class='modal'>
     <div class='modal-box'>
       <div style='font-size:6vw;font-weight:900;margin-bottom:4vw;'>⚙️ 수동 설정</div>
@@ -97,7 +97,10 @@
           <div id='setNumberDisplay' style='color:#fff;font-size:4.5vw;font-weight:900;width:5vw;text-align:center;'>6</div>
           <div onclick='changeSetCount(1)' style='color:#FF9500;font-size:4.5vw;font-weight:900;padding:1vw 3vw;cursor:pointer;'>➕</div>
         </div>
-        <button class='btn-auto' style='padding:2vw;' onclick='fillSundayTargets()'>일요일⬇️</button>
+        <div style='display:flex;gap:1.5vw;'>
+          <button class='btn-auto' style='padding:1.5vw 2vw;' onclick='fillSaturdayTargets()'>토욜⬇️</button>
+          <button class='btn-auto' style='padding:1.5vw 2vw;' onclick='fillSundayTargets()'>일욜⬇️</button>
+        </div>
       </div>
   
       <div class='irow'><span class='ilabel'>🌅 아침/점심피크</span><input class='ifield' id='t_morning' type='number'></div>
@@ -387,9 +390,24 @@
       document.getElementById('t_night').value = Math.round((base.night[dIdx] / 6) * n);
     }
 
+    // 토요일 원클릭 자동입력
+    function fillSaturdayTargets(){
+      var n = parseInt(document.getElementById('setNumberDisplay').textContent) || 6;
+      var base = currentData.baseTargets || {morning:[126,126,126,126,144,186,198],afternoon:[120,120,120,120,126,132,132],evening:[180,180,180,180,192,216,210],night:[174,174,174,174,198,186,180]};
+      document.getElementById('t_morning').value = Math.round((base.morning / 6) * n);
+      document.getElementById('t_afternoon').value = Math.round((base.afternoon / 6) * n);
+      document.getElementById('t_evening').value = Math.round((base.evening / 6) * n);
+      document.getElementById('t_night').value = Math.round((base.night / 6) * n);
+      document.getElementById('te_morning').value = 14;
+      document.getElementById('te_afternoon').value = 17;
+      document.getElementById('te_evening').value = 24;
+      showToast(n + '세트 기준 토요일 물량이 입력되었습니다.');
+    }
+
+    // 일요일 원클릭 자동입력
     function fillSundayTargets(){
       var n = parseInt(document.getElementById('setNumberDisplay').textContent) || 6;
-      var base = currentData.baseTargets;
+      var base = currentData.baseTargets || {morning:[126,126,126,126,144,186,198],afternoon:[120,120,120,120,126,132,132],evening:[180,180,180,180,192,216,210],night:[174,174,174,174,198,186,180]};
       document.getElementById('t_morning').value = Math.round((base.morning / 6) * n);
       document.getElementById('t_afternoon').value = Math.round((base.afternoon / 6) * n);
       document.getElementById('t_evening').value = Math.round((base.evening / 6) * n);
