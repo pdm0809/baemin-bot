@@ -9,15 +9,15 @@ jobs:
   collect:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Python 설치
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: 필요 도구 설치
-        run: pip install requests
+      - name: 필요 도구 및 방화벽 우회 라이브러리 설치
+        run: pip install requests curl_cffi
 
       - name: 배민 데이터 가져오기
         run: python check_baemin.py
